@@ -1,0 +1,35 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: officer_postgres
+    environment:
+      POSTGRES_DB: officer_tracking_new
+      POSTGRES_USER: officer_admin
+      POSTGRES_PASSWORD: secure_password_123
+    volumes:
+      - postgres_data_new:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+
+  backend:
+    build: .
+    container_name: officer_backend
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=1
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=officer_tracking_new
+      - DB_USER=officer_admin
+      - DB_PASSWORD=secure_password_123
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
+volumes:
+  postgres_data_new:
