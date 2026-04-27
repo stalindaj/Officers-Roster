@@ -3,8 +3,8 @@ import axios from 'axios';
 
 const API_BASE = 'http://localhost:8000/api';
 
-function FlowchartDashboard() {
-  const [selectedNode, setSelectedNode] = useState('2LT');
+function Dashboard() {
+  const [selectedNode, setSelectedNode] = useState('O1');
   const [officers, setOfficers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [hoveredNode, setHoveredNode] = useState(null);
@@ -17,7 +17,13 @@ function FlowchartDashboard() {
     return { headers: { 'Authorization': `Bearer ${token}` } };
   };
 
-  const fetchOfficersByRank = async (rankCode) => {
+  const getRankCodeFromO = (oLevel) => {
+    const mapping = { 'O1': '2LT', 'O2': '1LT', 'O3': 'CPT', 'O4': 'MAJ', 'O5': 'LTC' };
+    return mapping[oLevel];
+  };
+
+  const fetchOfficersByRank = async (oLevel) => {
+    const rankCode = getRankCodeFromO(oLevel);
     setLoading(true);
     try {
       let allOfficers = [];
@@ -28,7 +34,7 @@ function FlowchartDashboard() {
         nextUrl = response.data.next;
       }
       setOfficers(allOfficers);
-      setSelectedNode(rankCode);
+      setSelectedNode(oLevel);
       setExpandedOfficer(null);
       setCareerHistory({});
     } catch (error) {
@@ -44,7 +50,6 @@ function FlowchartDashboard() {
       setExpandedOfficer(expandedOfficer === officerId ? null : officerId);
       return;
     }
-    
     try {
       const response = await axios.get(`${API_BASE}/officers/officers/${officerId}/`, getAuthHeader());
       setCareerHistory(prev => ({ ...prev, [officerId]: response.data.career_history || [] }));
@@ -61,20 +66,14 @@ function FlowchartDashboard() {
   };
 
   useEffect(() => {
-    fetchOfficersByRank('2LT');
+    fetchOfficersByRank('O1');
   }, []);
 
-  const ranks = [
-    { code: '2LT', label: 'O1', name: '2nd Lieutenant', color: 'bg-gray-600' },
-    { code: '1LT', label: 'O2', name: '1st Lieutenant', color: 'bg-blue-600' },
-    { code: 'CPT', label: 'O3', name: 'Captain', color: 'bg-green-600' },
-    { code: 'MAJ', label: 'O4', name: 'Major', color: 'bg-purple-600' },
-    { code: 'LTC', label: 'O5', name: 'Lt Colonel', color: 'bg-yellow-600' },
-  ];
+  const oLevels = ['O1', 'O2', 'O3', 'O4', 'O5'];
 
   const getRankColor = (rankCode) => {
-    const rank = ranks.find(r => r.code === rankCode);
-    return rank?.color || 'bg-gray-600';
+    const colors = { '2LT': 'bg-gray-600', '1LT': 'bg-blue-600', 'CPT': 'bg-green-600', 'MAJ': 'bg-purple-600', 'LTC': 'bg-yellow-600' };
+    return colors[rankCode] || 'bg-gray-600';
   };
 
   const getRatingBadge = (rating) => {
@@ -88,87 +87,93 @@ function FlowchartDashboard() {
     `${o.first_name} ${o.last_name} ${o.paf_number}`.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const currentRank = ranks.find(r => r.code === selectedNode);
-
   return (
     <div className="p-6">
       <h2 className="text-xl font-bold text-center mb-6 text-gray-800">15SW Pilot Career Progression Flowchart</h2>
       
-      {/* Rank Row - O1 to O5 with Arrows */}
-      <div className="relative mb-8">
-        <div className="grid grid-cols-5 gap-2">
-          {ranks.map((rank, idx) => (
-            <div key={rank.code} className="flex flex-col items-center">
-              <button
-                onClick={() => fetchOfficersByRank(rank.code)}
-                onMouseEnter={() => setHoveredNode(rank.code)}
-                onMouseLeave={() => setHoveredNode(null)}
-                className={`w-28 h-20 rounded-xl font-bold text-xl text-white transition-all duration-200 shadow-md ${selectedNode === rank.code ? `${rank.color} ring-4 ring-blue-300 scale-105` : rank.color} ${hoveredNode === rank.code ? 'scale-105' : 'scale-100'}`}
-              >
-                <div>{rank.label}</div>
-                <div className="text-xs font-normal opacity-80">{rank.name}</div>
-              </button>
-              {/* Arrow pointing down */}
-              <div className="text-2xl text-gray-400 mt-2">↓</div>
-            </div>
-          ))}
-        </div>
+      {/* Row 1: O1 to O5 buttons */}
+      <div className="flex justify-center items-center gap-4 mb-2">
+        {oLevels.map((level, idx) => (
+          <React.Fragment key={level}>
+            <button
+              onClick={() => fetchOfficersByRank(level)}
+              onMouseEnter={() => setHoveredNode(level)}
+              onMouseLeave={() => setHoveredNode(null)}
+              className={`w-20 h-14 rounded-lg font-bold text-lg text-white transition-all shadow-md ${
+                selectedNode === level ? 'bg-blue-700 ring-4 ring-blue-300 scale-105' : 'bg-blue-500'
+              } ${hoveredNode === level ? 'scale-105' : 'scale-100'}`}
+            >
+              {level}
+            </button>
+            {idx < oLevels.length - 1 && (
+              <div className="flex flex-col items-center">
+                <div className="w-12 h-0.5 bg-blue-400"></div>
+                {idx >= 2 && <span className="text-xs text-gray-500">QRS</span>}
+              </div>
+            )}
+          </React.Fragment>
+        ))}
       </div>
 
-      {/* Role Buttons Row */}
-      <div className="grid grid-cols-5 gap-2 mb-6">
-        <div className="flex justify-center">
-          <button className="px-4 py-2 bg-green-500 text-white rounded-lg font-semibold shadow-md w-32">CO-PILOT</button>
-        </div>
-        <div className="flex justify-center">
-          <button className="px-4 py-2 bg-green-500 text-white rounded-lg font-semibold shadow-md w-32">WM</button>
-        </div>
-        <div className="flex justify-center">
-          <button className="px-4 py-2 bg-green-500 text-white rounded-lg font-semibold shadow-md w-32">EL</button>
-        </div>
-        <div className="flex justify-center">
-          <button className="px-4 py-2 bg-green-500 text-white rounded-lg font-semibold shadow-md w-32">IP</button>
-        </div>
-        <div className="flex justify-center">
-          <button className="px-4 py-2 bg-green-500 text-white rounded-lg font-semibold shadow-md w-32">FE</button>
-        </div>
-      </div>
-
-      {/* Diagonal Arrows Row */}
-      <div className="grid grid-cols-5 gap-2 mb-4">
-        <div className="flex justify-center text-2xl text-gray-400">↘</div>
-        <div></div>
-        <div></div>
-        <div className="flex justify-center text-2xl text-gray-400">↙</div>
-        <div className="flex justify-center text-2xl text-gray-400">↙</div>
-      </div>
-
-      {/* MTP and FC Row */}
-      <div className="grid grid-cols-5 gap-2 mb-4">
-        <div></div>
-        <div className="flex justify-center">
-          <div className="flex flex-col items-center">
-            <div className="text-2xl text-gray-400 mb-1">↑</div>
-            <button className="px-6 py-2 bg-green-500 text-white rounded-lg font-semibold shadow-md w-32">MTP</button>
+      {/* Row 2: Dashed vertical lines */}
+      <div className="flex justify-center gap-24 mb-2">
+        {oLevels.map((level) => (
+          <div key={`dash-${level}`} className="w-20 flex justify-center">
+            <div className="w-0.5 h-6 border-l-2 border-dashed border-gray-400"></div>
           </div>
+        ))}
+      </div>
+
+      {/* Row 3: Role buttons - CO PILOT, WM, EL, IP, FE */}
+      <div className="flex justify-center items-center gap-4 mb-2">
+        <button className="px-3 py-2 bg-green-500 text-white rounded-lg font-semibold text-sm shadow-md w-28 hover:bg-green-600">CO PILOT</button>
+        <div className="text-xl text-gray-400">→</div>
+        <button className="px-3 py-2 bg-green-500 text-white rounded-lg font-semibold text-sm shadow-md w-20 hover:bg-green-600">WM</button>
+        <div className="text-xl text-gray-400">→</div>
+        <button className="px-3 py-2 bg-green-500 text-white rounded-lg font-semibold text-sm shadow-md w-20 hover:bg-green-600">EL</button>
+        <div className="text-xl text-gray-400">→</div>
+        <button className="px-3 py-2 bg-green-500 text-white rounded-lg font-semibold text-sm shadow-md w-20 hover:bg-green-600">IP</button>
+        <div className="text-xl text-gray-400">→</div>
+        <button className="px-3 py-2 bg-green-500 text-white rounded-lg font-semibold text-sm shadow-md w-20 hover:bg-green-600">FE</button>
+      </div>
+
+      {/* Row 4: Sub-labels under roles */}
+      <div className="flex justify-center gap-16 mb-4 text-xs text-gray-500">
+        <div className="w-28 text-center">(O1-O2)</div>
+        <div className="w-20 text-center">(O1-O2)</div>
+        <div className="w-20 text-center">(O3)</div>
+        <div className="w-20 text-center">(O4)</div>
+        <div className="w-20 text-center">(O5)</div>
+      </div>
+
+      {/* Row 5: MTP and FC centered below */}
+      <div className="flex justify-center items-center gap-16 mb-2">
+        <div className="flex flex-col items-center">
+          <div className="text-xl text-gray-400">↘</div>
+          <button className="px-3 py-2 bg-green-500 text-white rounded-lg font-semibold text-sm shadow-md w-20 hover:bg-green-600">MTP</button>
+          <div className="text-xs text-gray-500">(O4)</div>
         </div>
-        <div></div>
-        <div className="flex justify-center">
-          <div className="flex flex-col items-center">
-            <div className="text-2xl text-gray-400 mb-1">↑</div>
-            <button className="px-6 py-2 bg-green-500 text-white rounded-lg font-semibold shadow-md w-32">FC</button>
-          </div>
+        <div className="flex flex-col items-center">
+          <div className="text-xl text-gray-400">↙</div>
+          <button className="px-3 py-2 bg-green-500 text-white rounded-lg font-semibold text-sm shadow-md w-20 hover:bg-green-600">FC</button>
+          <div className="text-xs text-gray-500">(O4)</div>
         </div>
-        <div></div>
+      </div>
+
+      {/* Row 6: Double-headed arrows between MTP-IP and IP-FC */}
+      <div className="flex justify-center items-center gap-28 mb-4">
+        <div className="text-sm text-gray-500">↔</div>
+        <div className="text-sm text-gray-500">↔</div>
       </div>
 
       {/* Legend */}
-      <div className="mt-6 p-3 bg-gray-100 rounded-lg text-sm">
-        <div className="flex flex-wrap gap-4">
-          <div className="flex items-center gap-2"><span className="w-3 h-3 bg-gray-600 rounded-full"></span><span>O1-O2: CO-PILOT / WM</span></div>
-          <div className="flex items-center gap-2"><span className="w-3 h-3 bg-green-600 rounded-full"></span><span>O3: EL</span></div>
-          <div className="flex items-center gap-2"><span className="w-3 h-3 bg-purple-600 rounded-full"></span><span>O4: MTP / IP / FC</span></div>
-          <div className="flex items-center gap-2"><span className="w-3 h-3 bg-yellow-600 rounded-full"></span><span>O5: FE</span></div>
+      <div className="mt-4 p-2 bg-gray-100 rounded-lg text-xs">
+        <div className="flex flex-wrap gap-3 justify-center">
+          <div className="flex items-center gap-1"><span className="w-3 h-3 bg-blue-500 rounded"></span><span>O1-O5: Objectives</span></div>
+          <div className="flex items-center gap-1"><span className="w-3 h-3 bg-green-500 rounded"></span><span>Functional Roles</span></div>
+          <div className="flex items-center gap-1"><span className="text-gray-400">→</span><span>Primary Flow</span></div>
+          <div className="flex items-center gap-1"><span className="text-gray-400">↔</span><span>Two-way</span></div>
+          <div className="flex items-center gap-1"><span className="border-l-2 border-dashed border-gray-400 h-3"></span><span>Mapping</span></div>
         </div>
       </div>
 
@@ -189,7 +194,7 @@ function FlowchartDashboard() {
         </div>
       </div>
 
-      {/* Officers Table with Expandable History */}
+      {/* Officers Table */}
       <div className="mt-4 bg-white rounded-lg shadow overflow-hidden">
         <div className="bg-gray-50 px-4 py-3 border-b">
           <h2 className="font-semibold text-gray-700">{selectedNode} OFFICERS - Click on any row to view career history</h2>
@@ -203,7 +208,6 @@ function FlowchartDashboard() {
           <div className="divide-y divide-gray-200">
             {filteredOfficers.map((officer, idx) => (
               <div key={officer.id} className="hover:bg-gray-50">
-                {/* Officer Row - Click to expand */}
                 <div 
                   className="px-4 py-3 flex items-center justify-between cursor-pointer"
                   onClick={() => fetchOfficerHistory(officer.id)}
@@ -232,13 +236,10 @@ function FlowchartDashboard() {
                         {officer.status}
                       </span>
                     </div>
-                    <div className="w-8 text-gray-400">
-                      {expandedOfficer === officer.id ? '▲' : '▼'}
-                    </div>
+                    <div className="w-8 text-gray-400">{expandedOfficer === officer.id ? '▲' : '▼'}</div>
                   </div>
                 </div>
 
-                {/* Expanded Career History - Dropdown */}
                 {expandedOfficer === officer.id && careerHistory[officer.id] && (
                   <div className="bg-gray-50 px-4 py-3 border-t">
                     <h4 className="font-semibold text-sm text-gray-700 mb-2">Career History</h4>
@@ -248,22 +249,16 @@ function FlowchartDashboard() {
                       <div className="overflow-x-auto">
                         <table className="w-full text-xs">
                           <thead className="bg-gray-200">
-                            <tr>
-                              <th className="px-3 py-2 text-left">From</th>
-                              <th className="px-3 py-2 text-left">To</th>
-                              <th className="px-3 py-2 text-left">Unit</th>
-                              <th className="px-3 py-2 text-left">Position</th>
-                              <th className="px-3 py-2 text-left">Type</th>
-                            </tr>
+                            <tr><th className="px-3 py-2">From</th><th className="px-3 py-2">To</th><th className="px-3 py-2">Unit</th><th className="px-3 py-2">Position</th><th className="px-3 py-2">Type</th></tr>
                           </thead>
                           <tbody>
-                            {careerHistory[officer.id].map((history, hidx) => (
-                              <tr key={hidx} className="border-b border-gray-200">
-                                <td className="px-3 py-2 whitespace-nowrap">{formatDate(history.date_assumed)}</td>
-                                <td className="px-3 py-2 whitespace-nowrap">{formatDate(history.date_relinquished)}</td>
-                                <td className="px-3 py-2">{history.unit?.unit_code || '-'}</td>
-                                <td className="px-3 py-2 max-w-md">{history.position?.position_title || '-'}</td>
-                                <td className="px-3 py-2">{history.assignment_type || 'PERMANENT'}</td>
+                            {careerHistory[officer.id].map((h, hidx) => (
+                              <tr key={hidx} className="border-b">
+                                <td className="px-3 py-2">{formatDate(h.date_assumed)}</td>
+                                <td className="px-3 py-2">{formatDate(h.date_relinquished)}</td>
+                                <td className="px-3 py-2">{h.unit?.unit_code || '-'}</td>
+                                <td className="px-3 py-2 max-w-md">{h.position?.position_title || '-'}</td>
+                                <td className="px-3 py-2">{h.assignment_type || 'PERMANENT'}</td>
                               </tr>
                             ))}
                           </tbody>
@@ -281,4 +276,4 @@ function FlowchartDashboard() {
   );
 }
 
-export default FlowchartDashboard;
+export default Dashboard;
