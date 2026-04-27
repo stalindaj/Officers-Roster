@@ -19,16 +19,22 @@ function App() {
     if (token) {
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       setIsAuthenticated(true);
-      setUserRole(localStorage.getItem('user_role'));
-      setUsername(localStorage.getItem('username'));
+      const role = localStorage.getItem('user_role');
+      const name = localStorage.getItem('username');
+      console.log('Loaded from storage - Role:', role, 'Username:', name);
+      setUserRole(role);
+      setUsername(name);
     }
     setLoading(false);
   }, []);
 
   const handleLogin = (status) => {
     setIsAuthenticated(status);
-    setUserRole(localStorage.getItem('user_role'));
-    setUsername(localStorage.getItem('username'));
+    const role = localStorage.getItem('user_role');
+    const name = localStorage.getItem('username');
+    console.log('After login - Role:', role, 'Username:', name);
+    setUserRole(role);
+    setUsername(name);
   };
 
   const handleLogout = () => {
@@ -38,6 +44,7 @@ function App() {
     localStorage.removeItem('username');
     delete axios.defaults.headers.common['Authorization'];
     setIsAuthenticated(false);
+    setUserRole(null);
   };
 
   if (loading) {
@@ -51,14 +58,13 @@ function App() {
   const isSuperAdmin = userRole === 'superadmin';
   const isAdmin = userRole === 'admin' || isSuperAdmin;
 
- const navItems = [
-  { id: 'dashboard', label: 'Dashboard', icon: '📊', show: true },
-  { id: 'ranked', label: 'By Rank', icon: '🎖️', show: true },
-  { id: 'table', label: 'All Officers', icon: '📋', show: true },
-  { id: 'admin', label: 'Admin', icon: '⚙️', show: isAdmin },
-  { id: 'direct-edit', label: '✏️ Direct Edit', icon: '✏️', show: isSuperAdmin },
-  { id: 'profile', label: 'Profile', icon: '👤', show: true },
-];
+  const navItems = [
+    { id: 'dashboard', label: 'Dashboard', icon: '📊', show: true },
+    { id: 'table', label: 'Data Table', icon: '📋', show: true },
+    { id: 'admin', label: 'Admin', icon: '⚙️', show: isAdmin },
+    { id: 'direct-edit', label: '✏️ Direct Edit', icon: '✏️', show: isSuperAdmin },
+    { id: 'profile', label: 'Profile', icon: '👤', show: true },
+  ];
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -89,12 +95,11 @@ function App() {
       </nav>
 
       <main className="p-6">
-          {activePage === 'dashboard' && <Dashboard />}
-          {activePage === 'ranked' && <RankedOfficers />}
-          {activePage === 'table' && <DataTable />}
-          {activePage === 'admin' && isAdmin && <AdminDashboard />}
-          {activePage === 'direct-edit' && isSuperAdmin && <DirectEdit />}
-          {activePage === 'profile' && <Profile username={username} role={userRole} />}
+        {activePage === 'dashboard' && <Dashboard />}
+        {activePage === 'table' && <DataTable />}
+        {activePage === 'admin' && isAdmin && <AdminDashboard />}
+        {activePage === 'direct-edit' && isSuperAdmin && <DirectEdit />}
+        {activePage === 'profile' && <Profile username={username} role={userRole} />}
       </main>
     </div>
   );

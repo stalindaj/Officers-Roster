@@ -1,3 +1,4 @@
+import { API_BASE } from '../config';
 import React from 'react';
 
 function Sidebar({ isOpen, onClose, onLogout }) {

@@ -1,3 +1,4 @@
+import { API_BASE } from '../../config';
 import React, { useState } from 'react';
 import CreateRequest from './CreateRequest';
 import PendingRequests from './PendingRequests';

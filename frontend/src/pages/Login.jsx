@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import { API_BASE } from '../config';
 
 function Login({ onLogin }) {
   const [username, setUsername] = useState('');
@@ -13,7 +14,7 @@ function Login({ onLogin }) {
     setError('');
 
     try {
-      const response = await axios.post('http://localhost:8000/api/token/', {
+      const response = await axios.post(`${API_BASE}/token/`, {
         username: username,
         password: password
       });
@@ -23,14 +24,24 @@ function Login({ onLogin }) {
       localStorage.setItem('refresh_token', refresh);
       axios.defaults.headers.common['Authorization'] = `Bearer ${access}`;
       
-      // Get user info
-      const userResponse = await axios.get('http://localhost:8000/api/users/me/');
-      localStorage.setItem('user_role', userResponse.data.role);
-      localStorage.setItem('username', userResponse.data.username);
+      const userResponse = await axios.get(`${API_BASE}/users/me/`);
+      console.log('User data from API:', userResponse.data);
+      console.log('Role from API:', userResponse.data.role);
+      
+      // Store role explicitly
+      const userRole = userResponse.data.role;
+      const userName = userResponse.data.username;
+      
+      localStorage.setItem('user_role', userRole);
+      localStorage.setItem('username', userName);
+      
+      console.log('Stored in localStorage - role:', localStorage.getItem('user_role'));
+      console.log('Stored in localStorage - username:', localStorage.getItem('username'));
       
       onLogin(true);
       
     } catch (err) {
+      console.error('Login error:', err);
       setError('Invalid username or password');
     } finally {
       setLoading(false);
@@ -82,10 +93,6 @@ function Login({ onLogin }) {
             {loading ? 'Signing in...' : 'Sign In'}
           </button>
         </form>
-
-        <div className="mt-6 text-center text-xs text-gray-500">
-          <p>Contact system administrator for access</p>
-        </div>
       </div>
     </div>
   );
