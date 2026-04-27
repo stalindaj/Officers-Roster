@@ -4,11 +4,12 @@ from .models import User
 
 class UserSerializer(serializers.ModelSerializer):
     full_name = serializers.SerializerMethodField()
+    role_display = serializers.CharField(source='get_role_display', read_only=True)
     
     class Meta:
         model = User
         fields = ('id', 'username', 'email', 'first_name', 'last_name', 'middle_name', 
-                  'full_name', 'role', 'contact_number', 'is_active', 'date_joined')
+                  'full_name', 'role', 'role_display', 'contact_number', 'is_active', 'date_joined')
         read_only_fields = ('id', 'date_joined')
     
     def get_full_name(self, obj):
@@ -34,6 +35,8 @@ class UserCreateSerializer(serializers.ModelSerializer):
         return user
 
 class UserProfileSerializer(serializers.ModelSerializer):
+    role_display = serializers.CharField(source='get_role_display', read_only=True)
+    
     class Meta:
         model = User
-        fields = ('id', 'username', 'email', 'first_name', 'last_name', 'role', 'contact_number')
+        fields = ('id', 'username', 'email', 'first_name', 'last_name', 'role', 'role_display', 'contact_number', 'date_joined')

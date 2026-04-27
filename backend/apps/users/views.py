@@ -28,14 +28,6 @@ class UserViewSet(viewsets.ModelViewSet):
         if self.action == 'create':
             return UserCreateSerializer
         return UserSerializer
-    
-    @action(detail=True, methods=['post'])
-    def set_active(self, request, pk=None):
-        user = self.get_object()
-        is_active = request.data.get('is_active', False)
-        user.is_active = is_active
-        user.save()
-        return Response({'status': 'updated'})
 
 class UserProfileViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = User.objects.all()
