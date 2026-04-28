@@ -6,6 +6,7 @@ import DataTable from './pages/DataTable';
 import Profile from './pages/Profile';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import DirectEdit from './pages/admin/DirectEdit';
+import PromotionDashboard from './pages/PromotionDashboard';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -58,6 +59,7 @@ function App() {
   { id: 'admin', label: 'Admin', icon: '⚙️', show: isAdmin },
   { id: 'direct-edit', label: '✏️ Direct Edit', icon: '✏️', show: isSuperAdmin },
   { id: 'profile', label: 'Profile', icon: '👤', show: true },
+  { id: 'promotion', label: 'Promotion Points', icon: '⭐', show: true },
 ];
 
   return (
@@ -95,6 +97,7 @@ function App() {
           {activePage === 'admin' && isAdmin && <AdminDashboard />}
           {activePage === 'direct-edit' && isSuperAdmin && <DirectEdit />}
           {activePage === 'profile' && <Profile username={username} role={userRole} />}
+          {activePage === 'promotion' && <PromotionDashboard />}
       </main>
     </div>
   );
