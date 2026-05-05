@@ -383,3 +383,5 @@ dmypy.json
 cython_debug/
 
 /scripts
+
+.env.dev

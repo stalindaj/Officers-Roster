@@ -1,91 +1,14 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-
-const API_BASE = 'http://localhost:8000/api';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 function Dashboard() {
-  const [selectedNode, setSelectedNode] = useState('O1');
-  const [officers, setOfficers] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
   const [hoveredNode, setHoveredNode] = useState(null);
-  const [expandedOfficer, setExpandedOfficer] = useState(null);
-  const [careerHistory, setCareerHistory] = useState({});
-  const [searchTerm, setSearchTerm] = useState('');
-
-  const getAuthHeader = () => {
-    const token = localStorage.getItem('access_token');
-    return { headers: { 'Authorization': `Bearer ${token}` } };
-  };
-
-  const getRankCodeFromO = (oLevel) => {
-    const mapping = { 'O1': '2LT', 'O2': '1LT', 'O3': 'CPT', 'O4': 'MAJ', 'O5': 'LTC' };
-    return mapping[oLevel];
-  };
-
-  const fetchOfficersByRank = async (oLevel) => {
-    const rankCode = getRankCodeFromO(oLevel);
-    setLoading(true);
-    try {
-      let allOfficers = [];
-      let nextUrl = `${API_BASE}/officers/officers/?rank=${rankCode}&page_size=100`;
-      while (nextUrl) {
-        const response = await axios.get(nextUrl, getAuthHeader());
-        allOfficers = [...allOfficers, ...(response.data.results || [])];
-        nextUrl = response.data.next;
-      }
-      setOfficers(allOfficers);
-      setSelectedNode(oLevel);
-      setExpandedOfficer(null);
-      setCareerHistory({});
-    } catch (error) {
-      console.error(error);
-      setOfficers([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchOfficerHistory = async (officerId) => {
-    if (careerHistory[officerId]) {
-      setExpandedOfficer(expandedOfficer === officerId ? null : officerId);
-      return;
-    }
-    try {
-      const response = await axios.get(`${API_BASE}/officers/officers/${officerId}/`, getAuthHeader());
-      setCareerHistory(prev => ({ ...prev, [officerId]: response.data.career_history || [] }));
-      setExpandedOfficer(officerId);
-    } catch (error) {
-      console.error(error);
-    }
-  };
-
-  const formatFlyingHours = (h) => h ? Math.round(h).toLocaleString() : '0';
-  const formatDate = (dateString) => {
-    if (!dateString) return 'Present';
-    return new Date(dateString).toLocaleDateString();
-  };
-
-  useEffect(() => {
-    fetchOfficersByRank('O1');
-  }, []);
-
   const oLevels = ['O1', 'O2', 'O3', 'O4', 'O5'];
 
-  const getRankColor = (rankCode) => {
-    const colors = { '2LT': 'bg-gray-600', '1LT': 'bg-blue-600', 'CPT': 'bg-green-600', 'MAJ': 'bg-purple-600', 'LTC': 'bg-yellow-600' };
-    return colors[rankCode] || 'bg-gray-600';
+  const handleRankClick = (level) => {
+    navigate(`/officers/${level}`);
   };
-
-  const getRatingBadge = (rating) => {
-    if (rating === 'COMMAND') return 'bg-yellow-100 text-yellow-800';
-    if (rating === 'SENIOR') return 'bg-blue-100 text-blue-800';
-    if (rating === 'BASIC') return 'bg-gray-100 text-gray-800';
-    return 'bg-gray-100 text-gray-500';
-  };
-
-  const filteredOfficers = officers.filter(o =>
-    `${o.first_name} ${o.last_name} ${o.paf_number}`.toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
   return (
     <div className="p-6">
@@ -96,12 +19,12 @@ function Dashboard() {
         {oLevels.map((level, idx) => (
           <React.Fragment key={level}>
             <button
-              onClick={() => fetchOfficersByRank(level)}
+              onClick={() => handleRankClick(level)}
               onMouseEnter={() => setHoveredNode(level)}
               onMouseLeave={() => setHoveredNode(null)}
               className={`w-20 h-14 rounded-lg font-bold text-lg text-white transition-all shadow-md ${
-                selectedNode === level ? 'bg-blue-700 ring-4 ring-blue-300 scale-105' : 'bg-blue-500'
-              } ${hoveredNode === level ? 'scale-105' : 'scale-100'}`}
+                hoveredNode === level ? 'bg-blue-700 ring-4 ring-blue-300 scale-105' : 'bg-blue-500'
+              }`}
             >
               {level}
             </button>
@@ -124,7 +47,7 @@ function Dashboard() {
         ))}
       </div>
 
-      {/* Row 3: Role buttons - CO PILOT, WM, EL, IP, FE */}
+      {/* Row 3: Role buttons */}
       <div className="flex justify-center items-center gap-4 mb-2">
         <button className="px-3 py-2 bg-green-500 text-white rounded-lg font-semibold text-sm shadow-md w-28 hover:bg-green-600">CO PILOT</button>
         <div className="text-xl text-gray-400">→</div>
@@ -137,7 +60,7 @@ function Dashboard() {
         <button className="px-3 py-2 bg-green-500 text-white rounded-lg font-semibold text-sm shadow-md w-20 hover:bg-green-600">FE</button>
       </div>
 
-      {/* Row 4: Sub-labels under roles */}
+      {/* Row 4: Sub-labels */}
       <div className="flex justify-center gap-16 mb-4 text-xs text-gray-500">
         <div className="w-28 text-center">(O1-O2)</div>
         <div className="w-20 text-center">(O1-O2)</div>
@@ -146,7 +69,7 @@ function Dashboard() {
         <div className="w-20 text-center">(O5)</div>
       </div>
 
-      {/* Row 5: MTP and FC centered below */}
+      {/* Row 5: MTP and FC */}
       <div className="flex justify-center items-center gap-16 mb-2">
         <div className="flex flex-col items-center">
           <div className="text-xl text-gray-400">↘</div>
@@ -160,7 +83,7 @@ function Dashboard() {
         </div>
       </div>
 
-      {/* Row 6: Double-headed arrows between MTP-IP and IP-FC */}
+      {/* Row 6: Double-headed arrows */}
       <div className="flex justify-center items-center gap-28 mb-4">
         <div className="text-sm text-gray-500">↔</div>
         <div className="text-sm text-gray-500">↔</div>
@@ -175,102 +98,6 @@ function Dashboard() {
           <div className="flex items-center gap-1"><span className="text-gray-400">↔</span><span>Two-way</span></div>
           <div className="flex items-center gap-1"><span className="border-l-2 border-dashed border-gray-400 h-3"></span><span>Mapping</span></div>
         </div>
-      </div>
-
-      {/* Search Bar */}
-      <div className="mt-6 bg-white rounded-lg shadow p-3">
-        <div className="flex justify-between items-center flex-wrap gap-3">
-          <div>
-            <span className="text-lg font-semibold text-gray-700">{selectedNode} Officers</span>
-            <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-sm ml-2">{filteredOfficers.length} total</span>
-          </div>
-          <input
-            type="text"
-            placeholder="Search by name or PAF..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="px-3 py-1.5 border border-gray-300 rounded text-sm w-64 focus:outline-none focus:ring-1 focus:ring-blue-500"
-          />
-        </div>
-      </div>
-
-      {/* Officers Table */}
-      <div className="mt-4 bg-white rounded-lg shadow overflow-hidden">
-        <div className="bg-gray-50 px-4 py-3 border-b">
-          <h2 className="font-semibold text-gray-700">{selectedNode} OFFICERS - Click on any row to view career history</h2>
-        </div>
-
-        {loading ? (
-          <div className="text-center py-10">Loading...</div>
-        ) : filteredOfficers.length === 0 ? (
-          <div className="text-center py-10 text-gray-400">No officers found</div>
-        ) : (
-          <div className="divide-y divide-gray-200">
-            {filteredOfficers.map((officer, idx) => (
-              <div key={officer.id} className="hover:bg-gray-50">
-                <div 
-                  className="px-4 py-3 flex items-center justify-between cursor-pointer"
-                  onClick={() => fetchOfficerHistory(officer.id)}
-                >
-                  <div className="flex items-center gap-4 flex-1">
-                    <span className="text-gray-400 w-8">{idx + 1}</span>
-                    <div className="w-20">
-                      <span className={`px-2 py-1 rounded-full text-xs font-semibold text-white ${getRankColor(officer.rank)}`}>
-                        {officer.rank}
-                      </span>
-                    </div>
-                    <div className="flex-1">
-                      <span className="font-medium">{officer.first_name} {officer.last_name}</span>
-                      <span className="text-gray-400 text-xs ml-2">({officer.paf_number})</span>
-                    </div>
-                    <div className="w-28 text-right">
-                      <span className="text-emerald-600 font-semibold">{formatFlyingHours(officer.total_flight_hours)} hrs</span>
-                    </div>
-                    <div className="w-24">
-                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getRatingBadge(officer.rating)}`}>
-                        {officer.rating || 'N/A'}
-                      </span>
-                    </div>
-                    <div className="w-24">
-                      <span className={`px-2 py-1 rounded-full text-xs ${officer.status === 'ACTIVE' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>
-                        {officer.status}
-                      </span>
-                    </div>
-                    <div className="w-8 text-gray-400">{expandedOfficer === officer.id ? '▲' : '▼'}</div>
-                  </div>
-                </div>
-
-                {expandedOfficer === officer.id && careerHistory[officer.id] && (
-                  <div className="bg-gray-50 px-4 py-3 border-t">
-                    <h4 className="font-semibold text-sm text-gray-700 mb-2">Career History</h4>
-                    {careerHistory[officer.id].length === 0 ? (
-                      <p className="text-gray-400 text-sm text-center py-4">No career history available</p>
-                    ) : (
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-xs">
-                          <thead className="bg-gray-200">
-                            <tr><th className="px-3 py-2">From</th><th className="px-3 py-2">To</th><th className="px-3 py-2">Unit</th><th className="px-3 py-2">Position</th><th className="px-3 py-2">Type</th></tr>
-                          </thead>
-                          <tbody>
-                            {careerHistory[officer.id].map((h, hidx) => (
-                              <tr key={hidx} className="border-b">
-                                <td className="px-3 py-2">{formatDate(h.date_assumed)}</td>
-                                <td className="px-3 py-2">{formatDate(h.date_relinquished)}</td>
-                                <td className="px-3 py-2">{h.unit?.unit_code || '-'}</td>
-                                <td className="px-3 py-2 max-w-md">{h.position?.position_title || '-'}</td>
-                                <td className="px-3 py-2">{h.assignment_type || 'PERMANENT'}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
       </div>
     </div>
   );

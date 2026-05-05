@@ -1,4 +1,5 @@
 services:
+  # Local PostgreSQL - for feature branches only
   postgres:
     image: postgres:15-alpine
     container_name: officer_postgres
@@ -11,6 +12,9 @@ services:
     ports:
       - "5432:5432"
     restart: unless-stopped
+    # Only used when explicitly enabled
+    profiles:
+      - local
 
   backend:
     build: .
@@ -21,14 +25,15 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DEBUG=1
-      - DB_HOST=postgres
-      - DB_PORT=5432
-      - DB_NAME=officer_tracking_new
-      - DB_USER=officer_admin
-      - DB_PASSWORD=secure_password_123
-    depends_on:
-      - postgres
+      - DEBUG=${DEBUG:-1}
+      # These will be overridden by .env file
+      - DB_HOST=${DB_HOST:-postgres}
+      - DB_PORT=${DB_PORT:-5432}
+      - DB_NAME=${DB_NAME:-officer_tracking_new}
+      - DB_USER=${DB_USER:-officer_admin}
+      - DB_PASSWORD=${DB_PASSWORD:-secure_password_123}
+      - SSLMODE=${SSLMODE:-disable}
+    # Don't depend on postgres when using cloud DB
     restart: unless-stopped
 
 volumes:

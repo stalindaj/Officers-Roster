@@ -2,6 +2,7 @@
 Base settings for officer tracking system
 """
 import os
+import ssl
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -93,6 +94,20 @@ DATABASES = {
         'PORT': os.getenv('DB_PORT', '5432'),
     }
 }
+
+# ========== NEON DATABASE SSL CONFIGURATION ==========
+# Only add SSL options if SSLMODE is set (for Neon cloud)
+if os.getenv('SSLMODE'):
+    DATABASES['default']['OPTIONS'] = {
+        'sslmode': os.getenv('SSLMODE', 'require'),
+        # Neon uses self-signed certificates
+        'sslrootcert': None,
+    }
+    # Connection pooling for better performance with Neon
+    DATABASES['default']['CONN_MAX_AGE'] = int(os.getenv('CONN_MAX_AGE', 600))
+    # Connection health checks for serverless Neon
+    DATABASES['default']['CONN_HEALTH_CHECKS'] = True
+# =====================================================
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
