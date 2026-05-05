@@ -2,7 +2,6 @@
 Base settings for officer tracking system
 """
 import os
-import ssl
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -14,6 +13,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-development-key-change-in-production')
+
+# SECURITY WARNING: don't run with debug turned on in production!
+DEBUG = os.getenv('DEBUG', '1') == '1'
+
+# Allow hosts
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1,0.0.0.0').split(',')
 
 # Application definition
 DJANGO_APPS = [
@@ -82,32 +87,25 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
-# Database
-# https://docs.djangoproject.com/en/5.0/ref/settings/#databases
+# Database - PostgreSQL
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('DB_NAME', 'officer_tracking'),
+        'NAME': os.getenv('DB_NAME', 'officer_tracking_new'),
         'USER': os.getenv('DB_USER', 'officer_admin'),
         'PASSWORD': os.getenv('DB_PASSWORD', 'secure_password_123'),
-        'HOST': os.getenv('DB_HOST', 'localhost'),
+        'HOST': os.getenv('DB_HOST', 'postgres'),
         'PORT': os.getenv('DB_PORT', '5432'),
     }
 }
 
-# ========== NEON DATABASE SSL CONFIGURATION ==========
-# Only add SSL options if SSLMODE is set (for Neon cloud)
+# Neon SSL Configuration (only when SSLMODE is set)
 if os.getenv('SSLMODE'):
     DATABASES['default']['OPTIONS'] = {
         'sslmode': os.getenv('SSLMODE', 'require'),
-        # Neon uses self-signed certificates
         'sslrootcert': None,
     }
-    # Connection pooling for better performance with Neon
     DATABASES['default']['CONN_MAX_AGE'] = int(os.getenv('CONN_MAX_AGE', 600))
-    # Connection health checks for serverless Neon
-    DATABASES['default']['CONN_HEALTH_CHECKS'] = True
-# =====================================================
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
@@ -147,19 +145,6 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.IsAuthenticated',
     ),
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
-    'DEFAULT_FILTER_BACKENDS': (
-        'django_filters.rest_framework.DjangoFilterBackend',
-    ),
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 50,
-}
-
-# Spectacular API settings
-SPECTACULAR_SETTINGS = {
-    'TITLE': '15SW Officer Tracking System API',
-    'DESCRIPTION': 'API for tracking officers, assignments, flight hours, and promotions',
-    'VERSION': '1.0.0',
-    'SERVE_INCLUDE_SCHEMA': False,
 }
 
 # CORS settings

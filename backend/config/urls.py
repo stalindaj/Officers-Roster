@@ -21,6 +21,7 @@ urlpatterns = [
     path('api/flight-logs/', include('apps.flight_logs.urls')),
     path('api/qualifications/', include('apps.qualifications.urls')),
     path('api/promotion-points/', include('apps.promotion_points.urls')),
+    path('api/', include('apps.flight_logs.urls')),
 ]
 
 if settings.DEBUG:
