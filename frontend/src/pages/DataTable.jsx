@@ -34,7 +34,21 @@ function DataTable() {
     mission_type: '',
     remarks: ''
   });
-  
+
+  // Add Officer states
+  const [showAddOfficerForm, setShowAddOfficerForm] = useState(false);
+  const [newOfficer, setNewOfficer] = useState({
+    paf_number: '',
+    rank: '2LT',
+    first_name: '',
+    last_name: '',
+    middle_name: '',
+    suffix: '',
+    status: 'ACTIVE',
+    date_commissioned: ''
+  });
+  const [addingOfficer, setAddingOfficer] = useState(false);
+
   // Justifications/Remarks states
   const [justifications, setJustifications] = useState([]);
   const [newJustification, setNewJustification] = useState({
@@ -82,6 +96,41 @@ function DataTable() {
     }
   };
 
+  const handleAddOfficer = async () => {
+    if (!newOfficer.first_name || !newOfficer.last_name) {
+      alert('Please enter at least first name and last name');
+      return;
+    }
+    
+    setAddingOfficer(true);
+    try {
+      const response = await axios.post(
+        `${API_BASE}/officers/officers/`,
+        newOfficer,
+        getAuthHeader()
+      );
+      
+      setOfficers([response.data, ...officers]);
+      setShowAddOfficerForm(false);
+      setNewOfficer({
+        paf_number: '',
+        rank: '2LT',
+        first_name: '',
+        last_name: '',
+        middle_name: '',
+        suffix: '',
+        status: 'ACTIVE',
+        date_commissioned: ''
+      });
+      alert('✅ Officer added successfully!');
+    } catch (error) {
+      console.error('Error adding officer:', error);
+      alert('❌ Error adding officer: ' + (error.response?.data?.detail || error.message));
+    } finally {
+      setAddingOfficer(false);
+    }
+  };
+
   const fetchOfficerDetails = async (officerId) => {
     setLoadingHistory(true);
     try {
@@ -99,34 +148,33 @@ function DataTable() {
   };
 
   const fetchFlightHours = async (officerId) => {
-  try {
-    const currentYear = new Date().getFullYear();
-    const response = await axios.get(
-      `${API_BASE}/flight-logs/flight-logs/?officer=${officerId}`,
-      getAuthHeader()
-    );
-    const logs = response.data.results || response.data || [];
-    
-    // Filter logs for current year
-    const currentYearLogs = logs.filter(log => {
-      const logDate = new Date(log.flight_date);
-      return logDate.getFullYear() === currentYear;
-    });
-    
-    const totalHours = currentYearLogs.reduce((sum, log) => sum + (parseFloat(log.flight_hours) || 0), 0);
-    setCurrentYearHours(totalHours);
-    
-    if (totalHours >= flightHoursRequired) {
-      setFlightHoursStatus({ color: 'green', message: `✅ Met requirement: ${totalHours}/${flightHoursRequired} hrs` });
-    } else {
-      const remaining = flightHoursRequired - totalHours;
-      setFlightHoursStatus({ color: 'red', message: `⚠️ Short by ${remaining} hrs (${totalHours}/${flightHoursRequired})` });
+    try {
+      const currentYear = new Date().getFullYear();
+      const response = await axios.get(
+        `${API_BASE}/flight-logs/flight-logs/?officer=${officerId}`,
+        getAuthHeader()
+      );
+      const logs = response.data.results || response.data || [];
+      
+      const currentYearLogs = logs.filter(log => {
+        const logDate = new Date(log.flight_date);
+        return logDate.getFullYear() === currentYear;
+      });
+      
+      const totalHours = currentYearLogs.reduce((sum, log) => sum + (parseFloat(log.flight_hours) || 0), 0);
+      setCurrentYearHours(totalHours);
+      
+      if (totalHours >= flightHoursRequired) {
+        setFlightHoursStatus({ color: 'green', message: `✅ Met requirement: ${totalHours}/${flightHoursRequired} hrs` });
+      } else {
+        const remaining = flightHoursRequired - totalHours;
+        setFlightHoursStatus({ color: 'red', message: `⚠️ Short by ${remaining} hrs (${totalHours}/${flightHoursRequired})` });
+      }
+    } catch (error) {
+      console.error('Error fetching flight hours:', error);
+      setCurrentYearHours(0);
     }
-  } catch (error) {
-    console.error('Error fetching flight hours:', error);
-    setCurrentYearHours(0);
-  }
-};
+  };
 
   const fetchJustifications = async (officerId) => {
     try {
@@ -193,33 +241,33 @@ function DataTable() {
   };
 
   const handleAddFlightLog = async () => {
-  if (!newFlightLog.flight_date || !newFlightLog.flight_hours || !newFlightLog.aircraft_type) {
-    alert('Please fill in date, hours, and aircraft type');
-    return;
-  }
-  
-  try {
-    await axios.post(
-      `${API_BASE}/flight-logs/flight-logs/`,
-      {
-        officer: selectedOfficer.id,
-        flight_date: newFlightLog.flight_date,
-        flight_hours: parseFloat(newFlightLog.flight_hours),
-        aircraft_type: newFlightLog.aircraft_type,
-        mission_type: newFlightLog.mission_type || 'TRAINING',
-        remarks: newFlightLog.remarks
-      },
-      getAuthHeader()
-    );
-    await fetchFlightHours(selectedOfficer.id);
-    setNewFlightLog({ flight_date: '', flight_hours: '', aircraft_type: '', mission_type: '', remarks: '' });
-    setShowFlightForm(false);
-    alert('✅ Flight hours added successfully!');
-  } catch (error) {
-    console.error('Error adding flight hours:', error);
-    alert('Error adding flight hours: ' + (error.response?.data?.detail || error.message));
-  }
-};
+    if (!newFlightLog.flight_date || !newFlightLog.flight_hours || !newFlightLog.aircraft_type) {
+      alert('Please fill in date, hours, and aircraft type');
+      return;
+    }
+    
+    try {
+      await axios.post(
+        `${API_BASE}/flight-logs/flight-logs/`,
+        {
+          officer: selectedOfficer.id,
+          flight_date: newFlightLog.flight_date,
+          flight_hours: parseFloat(newFlightLog.flight_hours),
+          aircraft_type: newFlightLog.aircraft_type,
+          mission_type: newFlightLog.mission_type || 'TRAINING',
+          remarks: newFlightLog.remarks
+        },
+        getAuthHeader()
+      );
+      await fetchFlightHours(selectedOfficer.id);
+      setNewFlightLog({ flight_date: '', flight_hours: '', aircraft_type: '', mission_type: '', remarks: '' });
+      setShowFlightForm(false);
+      alert('✅ Flight hours added successfully!');
+    } catch (error) {
+      console.error('Error adding flight hours:', error);
+      alert('Error adding flight hours: ' + (error.response?.data?.detail || error.message));
+    }
+  };
 
   const handleAddJustification = async () => {
     try {
@@ -331,13 +379,21 @@ function DataTable() {
               </button>
             ))}
           </div>
-          <input 
-            type="text" 
-            placeholder="Search by name, rank, or PAF..." 
-            value={searchTerm} 
-            onChange={(e) => setSearchTerm(e.target.value)} 
-            className="px-3 py-1 border border-gray-300 rounded text-sm w-80" 
-          />
+          <div className="flex gap-2">
+            <input 
+              type="text" 
+              placeholder="Search by name, rank, or PAF..." 
+              value={searchTerm} 
+              onChange={(e) => setSearchTerm(e.target.value)} 
+              className="px-3 py-1 border border-gray-300 rounded text-sm w-80" 
+            />
+            <button
+              onClick={() => setShowAddOfficerForm(true)}
+              className="px-4 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700 flex items-center gap-1"
+            >
+              + Add Officer
+            </button>
+          </div>
         </div>
         
         {loading ? <div className="text-center py-10">Loading...</div> : (
@@ -375,18 +431,8 @@ function DataTable() {
                     <td className="px-4 py-3">{o.current_assignment?.unit?.unit_code || 'N/A'}</td>
                     <td className="px-4 py-3">
                       <div className="flex gap-2">
-                        <button 
-                          onClick={() => handleViewDetails(o)} 
-                          className="text-blue-600 hover:text-blue-800 text-sm"
-                        >
-                          View
-                        </button>
-                        <button 
-                          onClick={() => handleEditOfficer(o)} 
-                          className="text-green-600 hover:text-green-800 text-sm"
-                        >
-                          Edit
-                        </button>
+                        <button onClick={() => handleViewDetails(o)} className="text-blue-600 hover:text-blue-800 text-sm">View</button>
+                        <button onClick={() => handleEditOfficer(o)} className="text-green-600 hover:text-green-800 text-sm">Edit</button>
                       </div>
                     </td>
                   </tr>
@@ -419,13 +465,12 @@ function DataTable() {
         </div>
       </div>
 
-      {/* View Details Modal with Tabs and Edit Button */}
+      {/* View Details Modal */}
       {selectedOfficer && (
         <div className="fixed inset-0 z-50 overflow-y-auto" onClick={() => setSelectedOfficer(null)}>
           <div className="flex items-center justify-center min-h-screen px-4">
             <div className="fixed inset-0 bg-black bg-opacity-50" onClick={() => setSelectedOfficer(null)}></div>
             <div className="relative bg-white rounded-lg shadow-xl max-w-5xl w-full max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-              {/* Modal Header with Edit Button */}
               <div className="sticky top-0 bg-gradient-to-r from-blue-700 to-blue-800 px-6 py-4 rounded-t-lg">
                 <div className="flex justify-between items-center">
                   <div>
@@ -450,7 +495,6 @@ function DataTable() {
               </div>
 
               <div className="p-6">
-                {/* Basic Info Cards */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                   <div className="bg-gray-50 rounded-lg p-3">
                     <p className="text-xs text-gray-500">Rank</p>
@@ -470,113 +514,68 @@ function DataTable() {
                   </div>
                 </div>
 
-                
-                      {/* Flight Hours Tracker */}
-<div className="mb-6">
-  <h4 className="text-md font-semibold text-gray-800 mb-3 border-b pb-2">✈️ Flight Hours Tracker (Current Year)</h4>
-  <div className="bg-blue-50 rounded-lg p-4">
-    <div className="grid grid-cols-2 gap-4 mb-3">
-      <div>
-        <p className="text-xs text-gray-500">Hours Flown This Year</p>
-        <p className="text-3xl font-bold text-blue-700">{currentYearHours} hrs</p>
-      </div>
-      <div>
-        <p className="text-xs text-gray-500">Required Annual Hours</p>
-        <p className="text-2xl font-bold text-gray-700">{flightHoursRequired} hrs</p>
-      </div>
-    </div>
-    <div className={`text-sm font-semibold ${flightHoursStatus.color === 'green' ? 'text-green-600' : 'text-red-600'} mb-3`}>
-      {flightHoursStatus.message}
-    </div>
-    
-    <button
-      onClick={() => setShowFlightForm(!showFlightForm)}
-      className="text-sm text-blue-600 hover:text-blue-800"
-    >
-      {showFlightForm ? '− Cancel' : '+ Add Flight Hours'}
-    </button>
-    
-    {showFlightForm && (
-      <div className="mt-3 p-3 bg-white rounded-lg border">
-        <div className="grid grid-cols-2 gap-2">
-          <input
-            type="date"
-            value={newFlightLog.flight_date}
-            onChange={(e) => setNewFlightLog({...newFlightLog, flight_date: e.target.value})}
-            className="px-2 py-1 border rounded text-sm"
-          />
-          <input
-            type="number"
-            step="0.1"
-            placeholder="Hours"
-            value={newFlightLog.flight_hours}
-            onChange={(e) => setNewFlightLog({...newFlightLog, flight_hours: e.target.value})}
-            className="px-2 py-1 border rounded text-sm"
-          />
-          <select
-            value={newFlightLog.aircraft_type}
-            onChange={(e) => setNewFlightLog({...newFlightLog, aircraft_type: e.target.value})}
-            className="px-2 py-1 border rounded text-sm"
-          >
-            <option value="">Select Aircraft</option>
-            <option value="T-129">T-129 ATAK</option>
-            <option value="AW-109">AW-109AH</option>
-            <option value="MD-520">MD-520MG</option>
-            <option value="SF-260">SF-260TP</option>
-            <option value="OV-10">OV-10 Bronco</option>
-          </select>
-          <select
-            value={newFlightLog.mission_type}
-            onChange={(e) => setNewFlightLog({...newFlightLog, mission_type: e.target.value})}
-            className="px-2 py-1 border rounded text-sm"
-          >
-            <option value="">Select Mission</option>
-            <option value="TRAINING">Training</option>
-            <option value="COMBAT">Combat</option>
-            <option value="RECON">Reconnaissance</option>
-            <option value="TRANSPORT">Transport</option>
-            <option value="TEST">Test Flight</option>
-            <option value="MAINTENANCE">Maintenance Flight</option>
-            <option value="OTHER">Other</option>
-          </select>
-        </div>
-        <textarea
-          placeholder="Remarks (optional)"
-          value={newFlightLog.remarks}
-          onChange={(e) => setNewFlightLog({...newFlightLog, remarks: e.target.value})}
-          className="w-full mt-2 px-2 py-1 border rounded text-sm"
-          rows="1"
-        />
-        <button
-          onClick={handleAddFlightLog}
-          className="mt-2 px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700"
-        >
-          Save Flight Hours
-        </button>
-      </div>
-    )}
-  </div>
-</div>
+                <div className="mb-6">
+                  <h4 className="text-md font-semibold text-gray-800 mb-3 border-b pb-2">✈️ Flight Hours Tracker (Current Year)</h4>
+                  <div className="bg-blue-50 rounded-lg p-4">
+                    <div className="grid grid-cols-2 gap-4 mb-3">
+                      <div>
+                        <p className="text-xs text-gray-500">Hours Flown This Year</p>
+                        <p className="text-3xl font-bold text-blue-700">{currentYearHours} hrs</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500">Required Annual Hours</p>
+                        <p className="text-2xl font-bold text-gray-700">{flightHoursRequired} hrs</p>
+                      </div>
+                    </div>
+                    <div className={`text-sm font-semibold ${flightHoursStatus.color === 'green' ? 'text-green-600' : 'text-red-600'} mb-3`}>
+                      {flightHoursStatus.message}
+                    </div>
+                    
+                    <button onClick={() => setShowFlightForm(!showFlightForm)} className="text-sm text-blue-600 hover:text-blue-800">
+                      {showFlightForm ? '− Cancel' : '+ Add Flight Hours'}
+                    </button>
+                    
+                    {showFlightForm && (
+                      <div className="mt-3 p-3 bg-white rounded-lg border">
+                        <div className="grid grid-cols-2 gap-2">
+                          <input type="date" value={newFlightLog.flight_date} onChange={(e) => setNewFlightLog({...newFlightLog, flight_date: e.target.value})} className="px-2 py-1 border rounded text-sm" />
+                          <input type="number" step="0.1" placeholder="Hours" value={newFlightLog.flight_hours} onChange={(e) => setNewFlightLog({...newFlightLog, flight_hours: e.target.value})} className="px-2 py-1 border rounded text-sm" />
+                          <select value={newFlightLog.aircraft_type} onChange={(e) => setNewFlightLog({...newFlightLog, aircraft_type: e.target.value})} className="px-2 py-1 border rounded text-sm">
+                            <option value="">Select Aircraft</option>
+                            <option value="T-129">T-129 ATAK</option>
+                            <option value="AW-109">AW-109AH</option>
+                            <option value="MD-520">MD-520MG</option>
+                            <option value="SF-260">SF-260TP</option>
+                            <option value="OV-10">OV-10 Bronco</option>
+                          </select>
+                          <select value={newFlightLog.mission_type} onChange={(e) => setNewFlightLog({...newFlightLog, mission_type: e.target.value})} className="px-2 py-1 border rounded text-sm">
+                            <option value="">Select Mission</option>
+                            <option value="TRAINING">Training</option>
+                            <option value="COMBAT">Combat</option>
+                            <option value="RECON">Reconnaissance</option>
+                            <option value="TRANSPORT">Transport</option>
+                            <option value="TEST">Test Flight</option>
+                            <option value="MAINTENANCE">Maintenance Flight</option>
+                            <option value="OTHER">Other</option>
+                          </select>
+                        </div>
+                        <textarea placeholder="Remarks (optional)" value={newFlightLog.remarks} onChange={(e) => setNewFlightLog({...newFlightLog, remarks: e.target.value})} className="w-full mt-2 px-2 py-1 border rounded text-sm" rows="1" />
+                        <button onClick={handleAddFlightLog} className="mt-2 px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700">Save Flight Hours</button>
+                      </div>
+                    )}
+                  </div>
+                </div>
 
-
-                {/* Justifications / Reasons */}
                 <div className="mb-6">
                   <h4 className="text-md font-semibold text-gray-800 mb-3 border-b pb-2">📋 Justifications & Remarks</h4>
                   <div className="bg-yellow-50 rounded-lg p-4">
-                    <button
-                      onClick={() => setShowJustificationForm(!showJustificationForm)}
-                      className="text-sm text-yellow-700 hover:text-yellow-900 mb-3"
-                    >
+                    <button onClick={() => setShowJustificationForm(!showJustificationForm)} className="text-sm text-yellow-700 hover:text-yellow-900 mb-3">
                       + Add Justification
                     </button>
                     
                     {showJustificationForm && (
                       <div className="mb-3 p-3 bg-white rounded-lg border">
-                        <select
-                          value={newJustification.event_type}
-                          onChange={(e) => setNewJustification({...newJustification, event_type: e.target.value})}
-                          className="w-full mb-2 px-2 py-1 border rounded text-sm"
-                        >
+                        <select value={newJustification.event_type} onChange={(e) => setNewJustification({...newJustification, event_type: e.target.value})} className="w-full mb-2 px-2 py-1 border rounded text-sm">
                           <option value="">Select Type</option>
                           <option value="GROUNDED">Grounded</option>
                           <option value="TRAINING">Training</option>
@@ -586,42 +585,13 @@ function DataTable() {
                           <option value="DS">DS Assignment</option>
                           <option value="OTHER">Other</option>
                         </select>
-                        <input
-                          type="text"
-                          placeholder="Title"
-                          value={newJustification.title}
-                          onChange={(e) => setNewJustification({...newJustification, title: e.target.value})}
-                          className="w-full mb-2 px-2 py-1 border rounded text-sm"
-                        />
+                        <input type="text" placeholder="Title" value={newJustification.title} onChange={(e) => setNewJustification({...newJustification, title: e.target.value})} className="w-full mb-2 px-2 py-1 border rounded text-sm" />
                         <div className="grid grid-cols-2 gap-2 mb-2">
-                          <input
-                            type="date"
-                            placeholder="Start Date"
-                            value={newJustification.start_date}
-                            onChange={(e) => setNewJustification({...newJustification, start_date: e.target.value})}
-                            className="px-2 py-1 border rounded text-sm"
-                          />
-                          <input
-                            type="date"
-                            placeholder="End Date"
-                            value={newJustification.end_date}
-                            onChange={(e) => setNewJustification({...newJustification, end_date: e.target.value})}
-                            className="px-2 py-1 border rounded text-sm"
-                          />
+                          <input type="date" placeholder="Start Date" value={newJustification.start_date} onChange={(e) => setNewJustification({...newJustification, start_date: e.target.value})} className="px-2 py-1 border rounded text-sm" />
+                          <input type="date" placeholder="End Date" value={newJustification.end_date} onChange={(e) => setNewJustification({...newJustification, end_date: e.target.value})} className="px-2 py-1 border rounded text-sm" />
                         </div>
-                        <textarea
-                          placeholder="Description / Impact on Flying"
-                          value={newJustification.description}
-                          onChange={(e) => setNewJustification({...newJustification, description: e.target.value})}
-                          className="w-full mb-2 px-2 py-1 border rounded text-sm"
-                          rows="2"
-                        />
-                        <button
-                          onClick={handleAddJustification}
-                          className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700"
-                        >
-                          Save Justification
-                        </button>
+                        <textarea placeholder="Description / Impact on Flying" value={newJustification.description} onChange={(e) => setNewJustification({...newJustification, description: e.target.value})} className="w-full mb-2 px-2 py-1 border rounded text-sm" rows="2" />
+                        <button onClick={handleAddJustification} className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700">Save Justification</button>
                       </div>
                     )}
                     
@@ -633,11 +603,7 @@ function DataTable() {
                           <div key={idx} className="bg-white rounded-lg p-2 border">
                             <div className="flex justify-between items-start">
                               <div>
-                                <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
-                                  item.event_type === 'GROUNDED' ? 'bg-red-100 text-red-700' :
-                                  item.event_type === 'TRAINING' ? 'bg-green-100 text-green-700' :
-                                  'bg-gray-100 text-gray-700'
-                                }`}>
+                                <span className={`px-2 py-0.5 rounded text-xs font-semibold ${item.event_type === 'GROUNDED' ? 'bg-red-100 text-red-700' : item.event_type === 'TRAINING' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>
                                   {item.event_type}
                                 </span>
                                 <p className="font-medium text-sm mt-1">{item.title}</p>
@@ -652,7 +618,6 @@ function DataTable() {
                   </div>
                 </div>
 
-                {/* Current Assignment */}
                 {selectedOfficer.current_assignment && (
                   <div className="mb-6">
                     <h4 className="text-md font-semibold text-gray-800 mb-3 border-b pb-2">Current Assignment</h4>
@@ -673,43 +638,20 @@ function DataTable() {
                   </div>
                 )}
 
-                {/* Tabs */}
                 <div className="mb-4 border-b">
                   <div className="flex gap-4">
-                    <button
-                      onClick={() => setActiveTab('history')}
-                      className={`px-4 py-2 font-medium text-sm transition-colors ${
-                        activeTab === 'history'
-                          ? 'text-blue-600 border-b-2 border-blue-600'
-                          : 'text-gray-500 hover:text-gray-700'
-                      }`}
-                    >
+                    <button onClick={() => setActiveTab('history')} className={`px-4 py-2 font-medium text-sm transition-colors ${activeTab === 'history' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`}>
                       📋 Career History ({careerHistory.length})
                     </button>
-                    <button
-                      onClick={() => setActiveTab('qualifications')}
-                      className={`px-4 py-2 font-medium text-sm transition-colors ${
-                        activeTab === 'qualifications'
-                          ? 'text-blue-600 border-b-2 border-blue-600'
-                          : 'text-gray-500 hover:text-gray-700'
-                      }`}
-                    >
+                    <button onClick={() => setActiveTab('qualifications')} className={`px-4 py-2 font-medium text-sm transition-colors ${activeTab === 'qualifications' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`}>
                       🎓 Qualifications ({qualifications.length})
                     </button>
-                    <button
-                      onClick={() => setActiveTab('points')}
-                      className={`px-4 py-2 font-medium text-sm transition-colors ${
-                        activeTab === 'points'
-                          ? 'text-blue-600 border-b-2 border-blue-600'
-                          : 'text-gray-500 hover:text-gray-700'
-                      }`}
-                    >
+                    <button onClick={() => setActiveTab('points')} className={`px-4 py-2 font-medium text-sm transition-colors ${activeTab === 'points' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`}>
                       ⭐ Promotion Points ({points.total || 0})
                     </button>
                   </div>
                 </div>
 
-                {/* Tab: Career History */}
                 {activeTab === 'history' && (
                   <div className="overflow-x-auto max-h-96">
                     {loadingHistory ? (
@@ -743,32 +685,13 @@ function DataTable() {
                   </div>
                 )}
 
-                {/* Tab: Qualifications */}
                 {activeTab === 'qualifications' && (
                   <div>
                     <div className="grid grid-cols-3 gap-3 mb-4">
-                      <input
-                        type="text"
-                        placeholder="Qualification Type"
-                        value={newQualification.type}
-                        onChange={(e) => setNewQualification({...newQualification, type: e.target.value})}
-                        className="px-3 py-2 border rounded-md text-sm"
-                      />
-                      <input
-                        type="date"
-                        placeholder="Date Earned"
-                        value={newQualification.date_earned}
-                        onChange={(e) => setNewQualification({...newQualification, date_earned: e.target.value})}
-                        className="px-3 py-2 border rounded-md text-sm"
-                      />
-                      <button
-                        onClick={handleAddQualification}
-                        className="px-3 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700"
-                      >
-                        + Add
-                      </button>
+                      <input type="text" placeholder="Qualification Type" value={newQualification.type} onChange={(e) => setNewQualification({...newQualification, type: e.target.value})} className="px-3 py-2 border rounded-md text-sm" />
+                      <input type="date" placeholder="Date Earned" value={newQualification.date_earned} onChange={(e) => setNewQualification({...newQualification, date_earned: e.target.value})} className="px-3 py-2 border rounded-md text-sm" />
+                      <button onClick={handleAddQualification} className="px-3 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700">+ Add</button>
                     </div>
-
                     <div className="space-y-3 max-h-96 overflow-y-auto">
                       {qualifications.length === 0 ? (
                         <div className="text-center py-10 text-gray-400">No qualifications recorded</div>
@@ -781,25 +704,12 @@ function DataTable() {
                                   <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getQualificationBadge(qual.qualification_type || qual.type)}`}>
                                     {qual.qualification_type || qual.type || 'Qualification'}
                                   </span>
-                                  <span className="text-xs text-gray-500">
-                                    Earned: {formatDate(qual.date_earned)}
-                                  </span>
+                                  <span className="text-xs text-gray-500">Earned: {formatDate(qual.date_earned)}</span>
                                 </div>
-                                <p className="text-sm text-gray-700">
-                                  {qual.name || qual.description || 'No description available'}
-                                </p>
-                                {qual.expiration_date && (
-                                  <p className="text-xs text-orange-600 mt-1">
-                                    Expires: {formatDate(qual.expiration_date)}
-                                  </p>
-                                )}
+                                <p className="text-sm text-gray-700">{qual.name || qual.description || 'No description available'}</p>
+                                {qual.expiration_date && <p className="text-xs text-orange-600 mt-1">Expires: {formatDate(qual.expiration_date)}</p>}
                               </div>
-                              <button
-                                onClick={() => handleDeleteQualification(qual.id)}
-                                className="text-red-600 hover:text-red-800 text-xs"
-                              >
-                                Remove
-                              </button>
+                              <button onClick={() => handleDeleteQualification(qual.id)} className="text-red-600 hover:text-red-800 text-xs">Remove</button>
                             </div>
                           </div>
                         ))
@@ -808,7 +718,6 @@ function DataTable() {
                   </div>
                 )}
 
-                {/* Tab: Promotion Points */}
                 {activeTab === 'points' && (
                   <div className="bg-gradient-to-r from-amber-50 to-yellow-50 p-6 rounded-lg">
                     <div className="text-center mb-4">
@@ -825,17 +734,89 @@ function DataTable() {
                         ))}
                       </div>
                     )}
-                    <button className="mt-4 w-full px-3 py-2 bg-amber-600 text-white rounded-md text-sm hover:bg-amber-700">
-                      Recalculate Points
-                    </button>
+                    <button className="mt-4 w-full px-3 py-2 bg-amber-600 text-white rounded-md text-sm hover:bg-amber-700">Recalculate Points</button>
                   </div>
                 )}
               </div>
 
               <div className="sticky bottom-0 bg-gray-50 px-6 py-3 rounded-b-lg flex justify-end">
-                <button onClick={() => setSelectedOfficer(null)} className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">
-                  Close
-                </button>
+                <button onClick={() => setSelectedOfficer(null)} className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">Close</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Officer Modal */}
+      {showAddOfficerForm && (
+        <div className="fixed inset-0 z-50 overflow-y-auto" onClick={() => setShowAddOfficerForm(false)}>
+          <div className="flex items-center justify-center min-h-screen px-4">
+            <div className="fixed inset-0 bg-black bg-opacity-50" onClick={() => setShowAddOfficerForm(false)}></div>
+            <div className="relative bg-white rounded-lg shadow-xl max-w-lg w-full" onClick={(e) => e.stopPropagation()}>
+              <div className="sticky top-0 bg-gradient-to-r from-green-700 to-green-800 px-6 py-4 rounded-t-lg">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-xl font-bold text-white">Add New Officer</h3>
+                  <button onClick={() => setShowAddOfficerForm(false)} className="text-white hover:text-gray-200 text-2xl">&times;</button>
+                </div>
+              </div>
+
+              <div className="p-6">
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">PAF Number</label>
+                    <input type="text" placeholder="O-12345" value={newOfficer.paf_number} onChange={(e) => setNewOfficer({...newOfficer, paf_number: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">First Name *</label>
+                      <input type="text" value={newOfficer.first_name} onChange={(e) => setNewOfficer({...newOfficer, first_name: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Last Name *</label>
+                      <input type="text" value={newOfficer.last_name} onChange={(e) => setNewOfficer({...newOfficer, last_name: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Middle Name</label>
+                    <input type="text" value={newOfficer.middle_name} onChange={(e) => setNewOfficer({...newOfficer, middle_name: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Rank</label>
+                      <select value={newOfficer.rank} onChange={(e) => setNewOfficer({...newOfficer, rank: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md">
+                        <option value="2LT">2LT - 2nd Lieutenant</option>
+                        <option value="1LT">1LT - 1st Lieutenant</option>
+                        <option value="CPT">CPT - Captain</option>
+                        <option value="MAJ">MAJ - Major</option>
+                        <option value="LTC">LTC - Lieutenant Colonel</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                      <select value={newOfficer.status} onChange={(e) => setNewOfficer({...newOfficer, status: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md">
+                        <option value="ACTIVE">ACTIVE</option>
+                        <option value="RETIRED">RETIRED</option>
+                        <option value="DECEASED">DECEASED</option>
+                        <option value="ON_LEAVE">ON LEAVE</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Suffix (Jr., Sr., III)</label>
+                    <input type="text" placeholder="Jr., Sr., III" value={newOfficer.suffix} onChange={(e) => setNewOfficer({...newOfficer, suffix: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Date Commissioned</label>
+                    <input type="date" value={newOfficer.date_commissioned} onChange={(e) => setNewOfficer({...newOfficer, date_commissioned: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md" />
+                  </div>
+                </div>
+
+                <div className="pt-4 mt-4 flex justify-end gap-3 border-t">
+                  <button onClick={() => setShowAddOfficerForm(false)} className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300">Cancel</button>
+                  <button onClick={handleAddOfficer} disabled={addingOfficer} className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50">
+                    {addingOfficer ? 'Adding...' : 'Add Officer'}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -850,9 +831,7 @@ function DataTable() {
             <div className="relative bg-white rounded-lg shadow-xl max-w-lg w-full max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
               <div className="sticky top-0 bg-gradient-to-r from-green-700 to-green-800 px-6 py-4 rounded-t-lg">
                 <div className="flex justify-between items-center">
-                  <h3 className="text-xl font-bold text-white">
-                    Edit Officer: {editingOfficer.first_name} {editingOfficer.last_name}
-                  </h3>
+                  <h3 className="text-xl font-bold text-white">Edit Officer: {editingOfficer.first_name} {editingOfficer.last_name}</h3>
                   <button onClick={() => setEditingOfficer(null)} className="text-white hover:text-gray-200 text-2xl">&times;</button>
                 </div>
                 <p className="text-green-200 text-sm mt-1">{editingOfficer.paf_number}</p>
@@ -863,11 +842,7 @@ function DataTable() {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Rank</label>
-                      <select
-                        value={editFormData.rank}
-                        onChange={(e) => setEditFormData({...editFormData, rank: e.target.value})}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                      >
+                      <select value={editFormData.rank} onChange={(e) => setEditFormData({...editFormData, rank: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md">
                         <option value="2LT">2LT - 2nd Lieutenant</option>
                         <option value="1LT">1LT - 1st Lieutenant</option>
                         <option value="CPT">CPT - Captain</option>
@@ -877,11 +852,7 @@ function DataTable() {
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                      <select
-                        value={editFormData.status}
-                        onChange={(e) => setEditFormData({...editFormData, status: e.target.value})}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                      >
+                      <select value={editFormData.status} onChange={(e) => setEditFormData({...editFormData, status: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md">
                         <option value="ACTIVE">ACTIVE</option>
                         <option value="RETIRED">RETIRED</option>
                         <option value="DECEASED">DECEASED</option>
@@ -891,27 +862,13 @@ function DataTable() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Date Commissioned</label>
-                    <input
-                      type="date"
-                      value={editFormData.date_commissioned}
-                      onChange={(e) => setEditFormData({...editFormData, date_commissioned: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                    />
+                    <input type="date" value={editFormData.date_commissioned} onChange={(e) => setEditFormData({...editFormData, date_commissioned: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md" />
                   </div>
                 </div>
 
                 <div className="pt-4 mt-4 flex justify-end gap-3 border-t">
-                  <button
-                    onClick={() => setEditingOfficer(null)}
-                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleUpdateOfficer}
-                    disabled={updating}
-                    className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50"
-                  >
+                  <button onClick={() => setEditingOfficer(null)} className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300">Cancel</button>
+                  <button onClick={handleUpdateOfficer} disabled={updating} className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50">
                     {updating ? 'Saving...' : 'Save Changes'}
                   </button>
                 </div>
